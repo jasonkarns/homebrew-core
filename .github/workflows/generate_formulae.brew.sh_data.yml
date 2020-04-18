@@ -2,20 +2,12 @@ name: Generate formulae.brew.sh data.
 
 on:
   push:
-    branches:
-      - master
 
 jobs:
   generate:
-    if: github.repository == 'Homebrew/homebrew-core'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@master
-      - uses: Homebrew/actions/git-ssh@master
-        with:
-          git_user: BrewTestBot
-          git_email: homebrew-test-bot@lists.sfconservancy.org
-          key: ${{ secrets.FORMULAE_DEPLOY_KEY }}
       - run: |
           brew update-reset "$(brew --repository)"
           brew tap "$GITHUB_REPOSITORY"
@@ -23,11 +15,8 @@ jobs:
 
           export PATH="$(brew --repo)/Library/Homebrew/vendor/portable-ruby/current/bin:$PATH"
 
-          git clone --depth=1 git@github.com:Homebrew/formulae.brew.sh
+          git clone --depth=1 -b rake-jekyll https://github.com/jasonkarns/formulae.brew.sh
           cd formulae.brew.sh
-
-          # setup analytics
-          echo "$ANALYTICS_JSON_KEY" > ~/.homebrew_analytics.json
 
           # run rake (without a rake binary)
           ruby -e "load Gem.bin_path('rake', 'rake')"
@@ -35,11 +24,6 @@ jobs:
           # commit and push generated files
           git add _data/formula api/formula formula
 
-          if ! git diff --exit-code HEAD -- _data/analytics _data/formula api/formula formula cask; then
-            git commit -m "formula: update from ${GITHUB_REPOSITORY} push" _data/analytics _data/formula api/formula formula
-            git fetch
-            git rebase origin/master
-            git push
-          fi
+          git status
         env:
-          ANALYTICS_JSON_KEY: ${{ secrets.ANALYTICS_JSON_KEY }}
+          HOMEBREW_NO_ANALYTICS: 1
